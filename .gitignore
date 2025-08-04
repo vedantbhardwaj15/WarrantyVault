@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.DS_Store
+npm-debug.log
+<<<<<<< HEAD
+yarn-error.log
+coverage/
+.vscode/
+.idea/
+*.log
+=======
+>>>>>>> 138d898 ( Second Warranty Vault commit (backend + frontend))
