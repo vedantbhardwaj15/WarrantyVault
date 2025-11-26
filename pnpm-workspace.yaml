@@ -1,0 +1,3 @@
+packages:
+  - 'warranty-frontend'
+  - 'warranty-backend'
