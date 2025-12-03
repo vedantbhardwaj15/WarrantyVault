@@ -1,6 +1,3 @@
--- ⚠️ WARNING: This will delete existing warranty data!
--- We are doing this to ensure a clean slate with the correct columns and types.
-
 DROP TABLE IF EXISTS warranties CASCADE;
 
 -- Create a table for storing warranty details
@@ -37,7 +34,6 @@ create policy "Users can delete their own warranties"
   using (auth.uid() = user_id);
 
 -- STORAGE POLICIES (Idempotent)
--- Create the bucket if it doesn't exist
 insert into storage.buckets (id, name, public)
 values ('warranties', 'warranties', false)
 on conflict (id) do nothing;

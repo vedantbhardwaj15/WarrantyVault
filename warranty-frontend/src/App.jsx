@@ -1,25 +1,84 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from './supabase';
 import Navbar from './components/Navbar';
-import Upload from './components/Upload';
-import WarrantyList from './components/WarrantyList';
+import Hero from './components/Hero';
+import HowItWorks from './components/HowItWorks';
+import AppShowcase from './components/AppShowcase';
+import UseCases from './components/UseCases';
+import LoginModal from './components/LoginModal';
+import CTA from './components/CTA';
+import Footer from './components/Footer';
+import Dashboard from './pages/Dashboard';
+import AddWarrantyModal from './components/AddWarrantyModal';
+import WarrantyDetailsModal from './components/WarrantyDetailsModal';
+import DashboardNavbar from './components/DashboardNavbar';
+
+// Simple Scroll Reveal Component
+const ScrollReveal = ({ children, className = '' }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const domRef = useRef();
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => setIsVisible(entry.isIntersecting));
+    });
+    
+    const currentElement = domRef.current;
+    if (currentElement) {
+      observer.observe(currentElement);
+    }
+    
+    return () => {
+      if (currentElement) {
+        observer.unobserve(currentElement);
+      }
+    };
+  }, []);
+
+  return (
+    <div
+      className={`reveal ${isVisible ? 'active' : ''} ${className}`}
+      ref={domRef}
+    >
+      {children}
+    </div>
+  );
+};
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [showUpload, setShowUpload] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedWarranty, setSelectedWarranty] = useState(null);
+  const refreshDashboard = useRef(null);
 
   useEffect(() => {
+    // Safety timeout to prevent infinite loading
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2000);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
+      clearTimeout(timer);
+    }).catch((err) => {
+      console.error("Supabase session error:", err);
+      setLoading(false);
+      clearTimeout(timer);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setLoading(false);
+      
+      // Security: Clear access token from URL
+      if (session && window.location.hash && window.location.hash.includes('access_token')) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -31,74 +90,99 @@ export default function App() {
     });
   };
 
+  const handleDeleteWarranty = async (id) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch(`http://localhost:5000/api/warranty/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        setSelectedWarranty(null);
+        if (refreshDashboard.current) {
+          refreshDashboard.current();
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to delete warranty:', errorData);
+        alert(`Failed to delete warranty: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting warranty:', error);
+      alert('Error deleting warranty. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors duration-300">
         <div className="animate-fade-in">Loading...</div>
       </div>
     );
   }
 
-  if (!session) {
-    return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-        <div className="card animate-fade-in" style={{ maxWidth: '400px', width: '100%', textAlign: 'center', padding: '3rem 2rem' }}>
-          <div style={{ 
-            width: '64px', 
-            height: '64px', 
-            background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-hover))',
-            borderRadius: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 'bold',
-            fontSize: '2rem',
-            margin: '0 auto 1.5rem'
-          }}>
-            W
-          </div>
-          <h1 style={{ marginBottom: '0.5rem', fontSize: '1.5rem', fontWeight: '700' }}>WarrantyVault</h1>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-            Never lose a warranty slip again. Track, organize, and get notified.
-          </p>
-          <button className="btn btn-primary" onClick={handleLogin} style={{ width: '100%', padding: '0.75rem' }}>
-            Sign in with Google
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ minHeight: '100vh', paddingBottom: '4rem' }}>
-      <Navbar session={session} />
+    <div className="min-h-screen flex flex-col w-full bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+      {session ? (
+        <DashboardNavbar session={session} />
+      ) : (
+        <Navbar 
+          session={session} 
+          onLogin={() => setShowLoginModal(true)}
+        />
+      )}
       
-      <main className="container" style={{ marginTop: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '600' }}>My Warranties</h2>
-          <button 
-            className={`btn ${showUpload ? 'btn-secondary' : 'btn-primary'}`}
-            onClick={() => setShowUpload(!showUpload)}
-          >
-            {showUpload ? 'Close' : 'Add New Warranty'}
-          </button>
-        </div>
-
-        {showUpload && (
-          <div className="animate-fade-in" style={{ marginBottom: '2rem' }}>
-            <Upload 
-              session={session} 
-              onUploadComplete={() => {
-                setShowUpload(false);
-                setRefreshTrigger(prev => prev + 1);
-              }} 
+      <main className="flex-1 w-full flex flex-col">
+        {!session ? (
+          <>
+            <Hero onGetStarted={() => setShowLoginModal(true)} />
+            <HowItWorks />
+            <AppShowcase />
+            <UseCases />
+            <CTA onGetStarted={() => setShowLoginModal(true)}/>
+          </>
+        ) : (
+          <div className="container mx-auto px-6 mt-8">
+            <Dashboard 
+              onAddWarranty={() => setShowAddModal(true)} 
+              onViewWarranty={(warranty) => setSelectedWarranty(warranty)}
+              onRefresh={refreshDashboard}
             />
           </div>
         )}
-
-        <WarrantyList session={session} refreshTrigger={refreshTrigger} />
       </main>
+      
+      <Footer />
+
+      {/* Modals */}
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+        onLogin={handleLogin} 
+      />
+
+      <AddWarrantyModal 
+        isOpen={showAddModal} 
+        onClose={() => setShowAddModal(false)}
+        onUploadSuccess={() => {
+          console.log('Upload success, refreshing dashboard...');
+          if (refreshDashboard.current) {
+            refreshDashboard.current();
+          }
+        }}
+      />
+
+      <WarrantyDetailsModal 
+        isOpen={!!selectedWarranty}
+        onClose={() => setSelectedWarranty(null)}
+        warranty={selectedWarranty}
+        onDelete={() => handleDeleteWarranty(selectedWarranty?.id)}
+      />
     </div>
   );
 }
