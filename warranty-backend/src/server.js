@@ -8,7 +8,11 @@ import ocrRoutes from './routes/ocr.js';
 import warrantyRoutes from './routes/warranty.js';
 
 const app = express();
-app.use(cors());
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || '*', // Allow specific origin or all
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 
 app.use('/health', healthRoutes);
