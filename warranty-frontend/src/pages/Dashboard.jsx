@@ -118,7 +118,7 @@ export default function Dashboard({ onAddWarranty, onViewWarranty, onRefresh }) 
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/warranty/list', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/warranty/list`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },

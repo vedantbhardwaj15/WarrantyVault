@@ -45,7 +45,7 @@ export default function EditWarrantyModal({ isOpen, onClose, warranty, onUpdateS
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`http://localhost:5000/api/warranty/${warranty.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/warranty/${warranty.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -49,7 +49,7 @@ export default function AddWarrantyModal({ isOpen, onClose, onUploadSuccess }) {
       if (!session) throw new Error('Not authenticated');
 
       // 4. API Request
-      const uploadPromise = fetch('http://localhost:5000/api/warranty/upload', {
+      const uploadPromise = fetch(`${import.meta.env.VITE_API_URL}/api/warranty/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

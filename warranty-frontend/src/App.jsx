@@ -95,7 +95,7 @@ export default function App() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const response = await fetch(`http://localhost:5000/api/warranty/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/warranty/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
