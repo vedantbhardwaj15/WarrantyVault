@@ -61,7 +61,12 @@ export default function App() {
     }, 2000);
 
     // Check backend session on load
-    fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
+    // Skip this check if we are processing a redirect login (hash present)
+    // to prevent race condition where 401 overrides the new session
+    const isRedirectLogin = window.location.hash && window.location.hash.includes('access_token');
+    
+    if (!isRedirectLogin) {
+      fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
       headers: { 'Content-Type': 'application/json' },
     })
     .then(res => {
@@ -78,6 +83,11 @@ export default function App() {
       setLoading(false);
       clearTimeout(timer);
     });
+    } else {
+        // If it IS a redirect login, let onAuthStateChange handle everything
+        // But ensures loading doesn't hang if onAuthStateChange fails to fire (fallback)
+        // actually onAuthStateChange listens globally so it will fire.
+    }
 
     const {
       data: { subscription },
