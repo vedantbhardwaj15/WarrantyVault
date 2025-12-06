@@ -15,6 +15,10 @@ export const createExpressSupabaseClient = (req, res) => {
           });
         },
       },
+      cookieOptions: {
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      },
     }
   );
 };
