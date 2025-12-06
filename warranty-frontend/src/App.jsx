@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { supabase } from './supabase';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -8,7 +8,8 @@ import UseCases from './components/UseCases';
 import LoginModal from './components/LoginModal';
 import CTA from './components/CTA';
 import Footer from './components/Footer';
-import Dashboard from './pages/Dashboard';
+// Lazy load Dashboard
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 import AddWarrantyModal from './components/AddWarrantyModal';
 import WarrantyDetailsModal from './components/WarrantyDetailsModal';
 import DashboardNavbar from './components/DashboardNavbar';
@@ -59,20 +60,45 @@ export default function App() {
       setLoading(false);
     }, 2000);
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    // Check backend session on load
+    fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
+      headers: { 'Content-Type': 'application/json' },
+    })
+    .then(res => {
+      if (res.ok) return res.json();
+      throw new Error('Not authenticated');
+    })
+    .then(data => {
+      setSession({ user: data.user });
       setLoading(false);
       clearTimeout(timer);
-    }).catch((err) => {
-      console.error("Supabase session error:", err);
+    })
+    .catch(() => {
+      setSession(null);
       setLoading(false);
       clearTimeout(timer);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        // Send tokens to backend to set cookies
+        await fetch(`${import.meta.env.VITE_API_URL}/api/auth/session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+          }),
+        });
+        setSession(session);
+      } else if (event === 'SIGNED_OUT') {
+        // Call backend logout to clear cookies
+        await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, { method: 'POST' });
+        setSession(null);
+      }
+      
       setLoading(false);
       
       // Security: Clear access token from URL
@@ -97,9 +123,7 @@ export default function App() {
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/warranty/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        credentials: 'include', // Send cookies
       });
 
       if (response.ok) {
@@ -148,11 +172,13 @@ export default function App() {
           </>
         ) : (
           <div className="container mx-auto px-6 mt-8">
-            <Dashboard 
-              onAddWarranty={() => setShowAddModal(true)} 
-              onViewWarranty={(warranty) => setSelectedWarranty(warranty)}
-              onRefresh={refreshDashboard}
-            />
+            <Suspense fallback={<div className="text-center py-10">Loading Dashboard...</div>}>
+              <Dashboard 
+                onAddWarranty={() => setShowAddModal(true)} 
+                onViewWarranty={(warranty) => setSelectedWarranty(warranty)}
+                onRefresh={refreshDashboard}
+              />
+            </Suspense>
           </div>
         )}
       </main>
@@ -170,7 +196,7 @@ export default function App() {
         isOpen={showAddModal} 
         onClose={() => setShowAddModal(false)}
         onUploadSuccess={() => {
-          console.log('Upload success, refreshing dashboard...');
+          // console.log('Upload success, refreshing dashboard...');
           if (refreshDashboard.current) {
             refreshDashboard.current();
           }

@@ -1,4 +1,5 @@
-import { supabase } from '../config/supabase.js';
+// import { supabase } from '../config/supabase.js'; // Removed global client usage
+import { validateWarranty } from '../utils/validation.js';
 
 //ADD MANUAL WARRANTY
 export const addWarranty = async (req, res) => {
@@ -7,6 +8,12 @@ export const addWarranty = async (req, res) => {
     const body = req.body;
 
     console.log('Adding warranty for user:', user.id);
+
+    // Zod Validation
+    const validation = validateWarranty({ ...body, file_path: body.file_path });
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors[0].message });
+    }
 
     if (!body.file_path) {
       return res.status(400).json({ error: 'Missing file_path' });
@@ -22,7 +29,7 @@ export const addWarranty = async (req, res) => {
       serial_number: body.serial_number || null,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('warranties')
       .insert([insertObj])
       .select()
@@ -44,7 +51,7 @@ export const addWarranty = async (req, res) => {
 export const getWarranties = async (req, res) => {
   try {
     const user = req.user;
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('warranties')
       .select('*')
       .eq('user_id', user.id)
@@ -55,7 +62,7 @@ export const getWarranties = async (req, res) => {
     // Generate signed URLs for display
     const warrantiesWithUrls = await Promise.all(data.map(async (item) => {
         if (item.file_path) {
-            const { data: signedData } = await supabase.storage
+            const { data: signedData } = await req.supabase.storage
                 .from('warranties')
                 .createSignedUrl(item.file_path, 3600); // 1 hour
             return { ...item, card_url: signedData?.signedUrl };
@@ -76,7 +83,7 @@ export const getWarrantyById = async (req, res) => {
     const user = req.user;
     const id = req.params.id;
 
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('warranties')
       .select('*')
       .eq('id', id)
@@ -117,7 +124,7 @@ export const deleteWarranty = async (req, res) => {
 
     // 2. Delete file from storage if it exists
     if (warranty.file_path) {
-      const { error: storageError } = await supabase.storage
+      const { error: storageError } = await req.supabase.storage
         .from('warranties')
         .remove([warranty.file_path]);
       
@@ -149,22 +156,10 @@ export const updateWarranty = async (req, res) => {
 
     console.log(`Updating warranty ${id} for user ${user.id}`, body);
 
-    // Input Validation
-    if (body.product_name && typeof body.product_name !== 'string') {
-      return res.status(400).json({ error: 'Invalid product_name format' });
-    }
-
-    const isValidDate = (dateStr) => {
-      if (!dateStr) return true; // Allow null/undefined
-      const d = new Date(dateStr);
-      return !isNaN(d.getTime());
-    };
-
-    if (!isValidDate(body.purchase_date)) {
-      return res.status(400).json({ error: 'Invalid purchase_date format' });
-    }
-    if (!isValidDate(body.expiry_date)) {
-      return res.status(400).json({ error: 'Invalid expiry_date format' });
+    // Zod Validation
+    const validation = validateWarranty(body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error.errors[0].message });
     }
 
     const updateObj = {
@@ -178,7 +173,7 @@ export const updateWarranty = async (req, res) => {
     // Remove undefined keys
     Object.keys(updateObj).forEach(key => updateObj[key] === undefined && delete updateObj[key]);
 
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .from('warranties')
       .update(updateObj)
       .eq('id', id)
@@ -215,7 +210,7 @@ export const uploadWarranty = async (req, res) => {
     const timestamp = Date.now();
     const filePath = `${userId}/${timestamp}.${fileExt}`;
     
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await req.supabase.storage
       .from('warranties')
       .upload(filePath, file.buffer, {
         contentType: file.mimetype,
@@ -228,7 +223,7 @@ export const uploadWarranty = async (req, res) => {
     }
     
     // 2. Generate signed URL for OCR analysis
-    const { data: signedUrlData } = await supabase.storage
+    const { data: signedUrlData } = await req.supabase.storage
       .from('warranties')
       .createSignedUrl(filePath, 3600);
     
@@ -294,7 +289,7 @@ export const uploadWarranty = async (req, res) => {
     if (dbError) {
       console.error('Database insert error:', dbError);
       // Clean up the uploaded file if DB insert fails to prevent orphans
-      await supabase.storage.from('warranties').remove([filePath]);
+      await req.supabase.storage.from('warranties').remove([filePath]);
       return res.status(500).json({ error: 'Database insert failed', details: dbError.message });
     }
     

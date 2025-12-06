@@ -6,6 +6,11 @@ export const supabase = createClient(
   {
     auth: {
       flowType: 'pkce',
+      storage: {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      },
     },
   }
 );

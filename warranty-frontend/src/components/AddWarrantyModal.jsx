@@ -51,9 +51,7 @@ export default function AddWarrantyModal({ isOpen, onClose, onUploadSuccess }) {
       // 4. API Request
       const uploadPromise = fetch(`${import.meta.env.VITE_API_URL}/api/warranty/upload`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        credentials: 'include', // Send cookies
         body: formData,
       });
 

@@ -23,8 +23,8 @@ export default function DashboardNavbar({ session }) {
 
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, { method: 'POST' });
+      await supabase.auth.signOut(); // Clear client state too
       window.location.href = '/'; // Redirect to home
     } catch (error) {
       console.error('Error signing out:', error);
@@ -44,7 +44,8 @@ export default function DashboardNavbar({ session }) {
           {/* Left: Brand */}
           <div 
             className="flex-shrink-0 flex items-center gap-2 cursor-pointer group" 
-            onClick={() => window.location.href = '/dashboard'}
+            onClick={() => window.location.href = '/'}
+            // fixed redirection when clickin the app label showed 404
           >
             <Shield className="w-8 h-8 text-blue-600 fill-blue-600/10 group-hover:scale-105 transition-transform" />
             <span className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">WarrantySync</span>

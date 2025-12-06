@@ -1,5 +1,5 @@
 import { analyzeWarrantySlip } from '../services/gemini.js';
-import { supabase } from '../config/supabase.js';
+// import { supabase } from '../config/supabase.js'; // Removed global client usage
 
 export const ocrExtract = async (req, res) => {
   try {
@@ -11,7 +11,7 @@ export const ocrExtract = async (req, res) => {
 
     // Generate a signed URL for the image so Gemini can access it
     // valid for 60 seconds
-    const { data, error } = await supabase
+    const { data, error } = await req.supabase
       .storage
       .from('warranties')
       .createSignedUrl(filePath, 60);

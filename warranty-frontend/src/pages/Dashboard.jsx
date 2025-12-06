@@ -111,22 +111,16 @@ export default function Dashboard({ onAddWarranty, onViewWarranty, onRefresh }) 
       
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) {
-        console.log('No session, skipping fetch');
-        setWarranties([]);
-        setLoading(false);
-        return;
-      }
+      // Session check is handled by backend response now
+      // if (!session) ...
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/warranty/list`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        credentials: 'include', // Send cookies
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Warranties fetched:', data);
+        // console.log('✅ Warranties fetched:', data);
         
         // Process and transform data
         const processedWarranties = processWarrantyData(data.warranties || []);
