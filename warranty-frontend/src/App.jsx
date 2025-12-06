@@ -67,6 +67,7 @@ export default function App() {
     
     if (!isRedirectLogin) {
       fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
     })
     .then(res => {
@@ -97,6 +98,7 @@ export default function App() {
         try {
           await fetch(`${import.meta.env.VITE_API_URL}/api/auth/session`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               access_token: session.access_token,
@@ -109,7 +111,7 @@ export default function App() {
         setSession(session);
       } else if (event === 'SIGNED_OUT') {
         // Call backend logout to clear cookies
-        await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, { method: 'POST' });
+        await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
         setSession(null);
       }
       
