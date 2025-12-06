@@ -6,11 +6,9 @@ export const supabase = createClient(
   {
     auth: {
       flowType: 'pkce',
-      storage: {
-        getItem: () => null,
-        setItem: () => {},
-        removeItem: () => {},
-      },
+      // Use sessionStorage for PKCE (code_verifier must persist during redirect)
+      // sessionStorage is tab-scoped and clears on close, so it's still secure
+      storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
     },
   }
 );
