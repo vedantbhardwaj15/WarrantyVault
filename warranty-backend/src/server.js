@@ -15,6 +15,9 @@ import authRoutes from './routes/auth.js';
 
 const app = express();
 
+// Trust Proxy (Required for Render/Vercel behind load balancer)
+app.set('trust proxy', 1);
+
 // Security Headers
 app.use(helmet());
 app.use(cookieParser());

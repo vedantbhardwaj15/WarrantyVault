@@ -94,14 +94,18 @@ export default function App() {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         // Send tokens to backend to set cookies
-        await fetch(`${import.meta.env.VITE_API_URL}/api/auth/session`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-          }),
-        });
+        try {
+          await fetch(`${import.meta.env.VITE_API_URL}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+            }),
+          });
+        } catch (err) {
+          console.error('Failed to set session cookie:', err);
+        }
         setSession(session);
       } else if (event === 'SIGNED_OUT') {
         // Call backend logout to clear cookies
